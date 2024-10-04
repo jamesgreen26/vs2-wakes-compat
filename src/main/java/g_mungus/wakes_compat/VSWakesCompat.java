@@ -19,8 +19,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.valkyrienskies.core.api.ships.Ship;
 import org.valkyrienskies.core.api.world.LevelYRange;
+import org.valkyrienskies.core.impl.game.ships.ShipObjectClient;
 import org.valkyrienskies.mod.common.VSGameUtilsKt;
 import org.valkyrienskies.mod.common.util.VectorConversionsMCKt;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import static g_mungus.wakes_compat.Util.approximateDirection;
 import static g_mungus.wakes_compat.Util.getYaw;
@@ -34,6 +38,9 @@ public class VSWakesCompat implements ClientModInitializer {
 	public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
 	private int shipSizeUpdaterCooldown = 0;
+	private int currentShipIndex = 0;
+
+	private ArrayList<Ship> ships = new ArrayList<>();
 
 	private static double seaLevel = 62.9;
 
@@ -59,24 +66,33 @@ public class VSWakesCompat implements ClientModInitializer {
 	private void onClientTick() {
         if (MinecraftClient.getInstance().player == null) return;
 
+
         World world = MinecraftClient.getInstance().player.getWorld();
+		ships.clear();
+        ships.addAll(VSGameUtilsKt.getAllShips(world));
 
-		VSGameUtilsKt.getAllShips(world).forEach(s -> {
+		if (ships.isEmpty()) return;
+
+
+		if (shipSizeUpdaterCooldown == 0) {
+			ShipWake.checkShipSize(ships.get(currentShipIndex));
+
+			currentShipIndex++;
+			if (currentShipIndex >= ships.size()) {
+				currentShipIndex = 0;
+			}
+		}
+
+		ships.forEach(s -> {
 			if (s != null) {
-
-				if (shipSizeUpdaterCooldown == 0) {
-					ShipWake.checkShipSize(s);
-				}
-
-
 				ShipWake.placeWakeTrail(s);
 				((ProducesWake)s).setPrevPos(((DynamicWakeSize)s).vs_wakes_compat_template_1_20_1$getPos());
 			}
-
-
 		});
 
-		if (shipSizeUpdaterCooldown == 9) {
+
+
+		if (shipSizeUpdaterCooldown >= (int)Math.max(9/ships.size(), 1)) {
 			shipSizeUpdaterCooldown = 0;
 		} else {
 			shipSizeUpdaterCooldown++;
