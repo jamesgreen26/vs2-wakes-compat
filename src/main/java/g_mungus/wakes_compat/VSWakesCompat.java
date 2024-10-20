@@ -1,6 +1,7 @@
 package g_mungus.wakes_compat;
 
 import com.goby56.wakes.duck.ProducesWake;
+import g_mungus.wakes_compat.config.VSWakesConfig;
 import net.fabricmc.api.ClientModInitializer;
 
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientEntityEvents;
@@ -31,6 +32,8 @@ import static g_mungus.wakes_compat.Util.getYaw;
 
 public class VSWakesCompat implements ClientModInitializer {
 	public static final String MOD_ID = "vs-wakes-compat";
+
+	public static final VSWakesConfig CONFIG = VSWakesConfig.createAndLoad();
 
 	// This logger is used to write text to the console and the log file.
 	// It is considered best practice to use your mod id as the logger's name.
@@ -65,7 +68,7 @@ public class VSWakesCompat implements ClientModInitializer {
 
 	private void onClientTick() {
         if (MinecraftClient.getInstance().player == null) return;
-
+		if (CONFIG.maxWidth() == 0) return;
 
         World world = MinecraftClient.getInstance().player.getWorld();
 		ships.clear();
@@ -75,16 +78,16 @@ public class VSWakesCompat implements ClientModInitializer {
 
 
 		if (shipSizeUpdaterCooldown == 0) {
-			ShipWake.checkShipSize(ships.get(currentShipIndex));
-
-			currentShipIndex++;
 			if (currentShipIndex >= ships.size()) {
 				currentShipIndex = 0;
 			}
+			ShipWake.checkShipSize(ships.get(currentShipIndex));
+
+			currentShipIndex++;
 		}
 
 		ships.forEach(s -> {
-			if (s != null) {
+			if (s != null && ((DynamicWakeSize)s).vs_wakes_compat_template_1_20_1$getWidth() > 0) {
 				ShipWake.placeWakeTrail(s);
 				((ProducesWake)s).setPrevPos(((DynamicWakeSize)s).vs_wakes_compat_template_1_20_1$getPos());
 			}

@@ -1,0 +1,6 @@
+{
+  "text.config.vs-wakes-config.title" : "VS Wakes Config",
+  "text.config.vs-wakes-config.option.shouldSkipWakesFromSide" : "Should skip wake rendering when ship is pushed sideways?",
+  "text.config.vs-wakes-config.option.maxWidth" : "Max width to produce a wake - 0 disables mod."
+
+}

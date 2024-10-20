@@ -13,6 +13,8 @@ import net.minecraft.world.World;
 import org.joml.Vector3d;
 import org.joml.Vector3dc;
 import org.joml.Vector3i;
+import org.joml.primitives.AABBi;
+import org.joml.primitives.AABBic;
 import org.valkyrienskies.core.api.ships.Ship;
 import org.valkyrienskies.core.api.world.LevelYRange;
 import org.valkyrienskies.mod.common.util.VectorConversionsMCKt;
@@ -20,6 +22,7 @@ import org.valkyrienskies.mod.common.util.VectorConversionsMCKt;
 import java.util.*;
 
 import static g_mungus.wakes_compat.Util.*;
+import static g_mungus.wakes_compat.VSWakesCompat.CONFIG;
 import static g_mungus.wakes_compat.VSWakesCompat.getSeaLevel;
 
 public class ShipWake {
@@ -44,6 +47,9 @@ public class ShipWake {
 //                float width = Math.min(xwidth, zwidth);
 
                 float width = ((DynamicWakeSize)ship).vs_wakes_compat_template_1_20_1$getWidth();
+
+                if (width > CONFIG.maxWidth()) return;
+
                 double toX = ((DynamicWakeSize)ship).vs_wakes_compat_template_1_20_1$getPos().x;
                 double toY = ((DynamicWakeSize)ship).vs_wakes_compat_template_1_20_1$getPos().z;
 
@@ -98,8 +104,25 @@ public class ShipWake {
 
         s.getActiveChunksSet().getMinMaxWorldPos(minWorldPos, maxWorldPos, new LevelYRange(minY, maxY));
 
-        calculateShipWidthAndOffset(world, minWorldPos, maxWorldPos, blockYLevelShip, direction, s);
 
+
+        if (VSWakesCompat.CONFIG.shouldSkipWakesFromSide()) {
+
+            AABBic shipBounds = s.getShipAABB();
+            assert shipBounds != null;
+            int shipX = shipBounds.maxX() - shipBounds.minX();
+            int shipZ = shipBounds.maxZ() - shipBounds.minZ();
+
+            if ((direction == Direction.NORTH || direction == Direction.SOUTH) && (shipX > shipZ)) {
+                ((DynamicWakeSize) s).vs_wakes_compat_template_1_20_1$setWidth(0);
+                return;
+            } else if ((direction == Direction.EAST || direction == Direction.WEST) && (shipZ > shipX)) {
+                ((DynamicWakeSize) s).vs_wakes_compat_template_1_20_1$setWidth(0);
+                return;
+            }
+        }
+
+        calculateShipWidthAndOffset(world, minWorldPos, maxWorldPos, blockYLevelShip, direction, s);
     }
 
 
@@ -107,6 +130,7 @@ public class ShipWake {
                                                     int blockYLevelShip, Direction direction, Ship s) {
         // Axis variables to abstract x-axis or z-axis iterations
         boolean isZAxis = (direction == Direction.NORTH || direction == Direction.SOUTH);
+
 
         int primaryMin = isZAxis ? minWorldPos.z() : minWorldPos.x();  // Min for the primary iteration axis
         int primaryMax = isZAxis ? maxWorldPos.z() : maxWorldPos.x();  // Max for the primary iteration axis
@@ -145,7 +169,7 @@ public class ShipWake {
 
         for(LinkedList<BlockPos> row : rows) {
             float rowWidth = getWidth(row);
-            if (rowWidth > width) {
+            if (rowWidth > width && rowWidth <= CONFIG.maxWidth()) {
                 width = rowWidth;
                 offset = getOffset(row);
                 offset = new Vector3d(offset.x, 0, offset.z);
